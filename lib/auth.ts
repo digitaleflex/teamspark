@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { twoFactor } from "better-auth/plugins";
+import { sendVerificationEmail as sendEmail } from "./email";
 
 // Configuration de base pour l'authentification compatible Edge
 export const auth = betterAuth({
@@ -9,9 +10,7 @@ export const auth = betterAuth({
     enabled: true,
     // Pas d'envoi d'e-mail dans l'environnement Edge
     sendVerificationEmail: async ({ user, url }: { user: any; url: string }) => {
-      // Dans l'environnement Edge, nous ne pouvons pas envoyer d'e-mails
-      // L'envoi d'e-mails doit être fait côté serveur
-      console.log(`Verification email should be sent to ${user.email}. URL: ${url}`);
+      await sendEmail(user.email, url);
     },
   },
   session: {

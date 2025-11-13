@@ -7,7 +7,8 @@ import {
 } from "@/lib/team-service";
 import { auth } from "@/lib/auth";
 
-export const runtime = "edge";
+// Supprimons le runtime edge car Prisma n'est pas compatible avec l'environnement Edge
+// export const runtime = "edge";
 
 /**
  * POST /api/teams/[id]/members - Ajouter un membre à une équipe
@@ -59,10 +60,10 @@ export async function POST(
 
     const teamMember = await addTeamMember(params.id, userId, role || "member");
     return NextResponse.json(teamMember, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de l'ajout d'un membre à l'équipe:", error);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: "Erreur interne du serveur: " + error.message },
       { status: 500 }
     );
   }
@@ -117,10 +118,10 @@ export async function DELETE(
 
     const teamMember = await removeTeamMember(params.id, userId);
     return NextResponse.json(teamMember);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de la suppression d'un membre de l'équipe:", error);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: "Erreur interne du serveur: " + error.message },
       { status: 500 }
     );
   }
@@ -175,10 +176,10 @@ export async function PUT(
 
     const teamMember = await updateTeamMemberRole(params.id, userId, role);
     return NextResponse.json(teamMember);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de la mise à jour du rôle d'un membre:", error);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: "Erreur interne du serveur: " + error.message },
       { status: 500 }
     );
   }

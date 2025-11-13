@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getTeamById, updateTeam, deleteTeam } from "@/lib/team-service";
 import { auth } from "@/lib/auth";
 
-export const runtime = "edge";
+// Supprimons le runtime edge car Prisma n'est pas compatible avec l'environnement Edge
+// export const runtime = "edge";
 
 /**
  * GET /api/teams/[id] - Obtenir une équipe par ID
@@ -37,10 +38,10 @@ export async function GET(
     }
 
     return NextResponse.json(team);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de la récupération de l'équipe:", error);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: "Erreur interne du serveur: " + error.message },
       { status: 500 }
     );
   }
@@ -87,10 +88,10 @@ export async function PUT(
 
     const updatedTeam = await updateTeam(params.id, { name, description });
     return NextResponse.json(updatedTeam);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de la mise à jour de l'équipe:", error);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: "Erreur interne du serveur: " + error.message },
       { status: 500 }
     );
   }
@@ -127,10 +128,10 @@ export async function DELETE(
 
     const deletedTeam = await deleteTeam(params.id);
     return NextResponse.json(deletedTeam);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de la suppression de l'équipe:", error);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: "Erreur interne du serveur: " + error.message },
       { status: 500 }
     );
   }

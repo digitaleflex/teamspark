@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getTeamsByUserId, createTeam } from "@/lib/team-service";
 import { auth } from "@/lib/auth";
 
-export const runtime = "edge";
+// Supprimons le runtime edge car Prisma n'est pas compatible avec l'environnement Edge
+// export const runtime = "edge";
 
 /**
  * GET /api/teams - Obtenir toutes les équipes de l'utilisateur
@@ -20,10 +21,10 @@ export async function GET(request: Request) {
 
     const teams = await getTeamsByUserId(session.user.id);
     return NextResponse.json(teams);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de la récupération des équipes:", error);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: "Erreur interne du serveur: " + error.message },
       { status: 500 }
     );
   }
@@ -55,10 +56,10 @@ export async function POST(request: Request) {
 
     const team = await createTeam(name, description, session.user.id);
     return NextResponse.json(team, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de la création de l'équipe:", error);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: "Erreur interne du serveur: " + error.message },
       { status: 500 }
     );
   }
