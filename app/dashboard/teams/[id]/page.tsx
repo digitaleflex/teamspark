@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 
-export default function TeamDetailPage({ params }: { params: { id: string } }) {
+interface TeamDetailPageProps {
+  params: {
+    id: string
+  }
+}
+
+export default function TeamDetailPage({ params }: TeamDetailPageProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -13,9 +19,14 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
             Gérez les membres et les paramètres de votre équipe
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/dashboard/teams">Retour aux équipes</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/dashboard/teams/${params.id}/edit`}>Modifier</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/dashboard/teams">Retour aux équipes</Link>
+          </Button>
+        </div>
       </div>
       
       <Card>

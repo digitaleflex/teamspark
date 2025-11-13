@@ -1,29 +1,51 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-// Nous ne devrions pas importer auth ici car il contient des dépendances Node.js
-// qui ne fonctionnent pas dans l'environnement Edge
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+
+// Stockage en mémoire pour les tentatives de connexion (dans une vraie application, utiliser Redis ou une base de données)
+const loginAttempts = new Map<string, { count: number; lastAttempt: number }>()
+
+// Nombre maximum de tentatives avant blocage
+const MAX_ATTEMPTS = 5
+// Durée de blocage en millisecondes (15 minutes)
+const BLOCK_DURATION = 15 * 60 * 1000
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname } = request.nextUrl
   
-  // Pour l'instant, redirigeons simplement vers la page de connexion pour les routes protégées
-  // Vous devrez implémenter une vérification de session appropriée qui fonctionne dans l'environnement Edge
-  const protectedRoutes = ["/dashboard"];
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-  
-  if (isProtectedRoute) {
-    // Ici, vous devrez implémenter une vérification de session
-    // compatible avec l'environnement Edge
-    // Pour l'instant, nous allons simplement permettre l'accès
-    return NextResponse.next();
+  // Vérifier si c'est une tentative de connexion
+  if (pathname === "/api/auth/signin" && request.method === "POST") {
+    // Extraire l'IP de différentes sources possibles
+    const ip = 
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      request.headers.get("cf-connecting-ip") ||
+      "unknown"
+    
+    const now = Date.now()
+    
+    const attempt = loginAttempts.get(ip)
+    
+    // Vérifier si l'IP est bloquée
+    if (attempt && attempt.count >= MAX_ATTEMPTS) {
+      const timeSinceLastAttempt = now - attempt.lastAttempt
+      if (timeSinceLastAttempt < BLOCK_DURATION) {
+        return NextResponse.json(
+          { error: "Trop de tentatives de connexion. Veuillez réessayer plus tard." },
+          { status: 429 }
+        )
+      } else {
+        // Réinitialiser les tentatives après la durée de blocage
+        loginAttempts.delete(ip)
+      }
+    }
   }
   
-  return NextResponse.next();
+  return NextResponse.next()
 }
 
-// Configure which paths the middleware should run on
 export const config = {
-  matcher: ["/dashboard/:path*", "/((?!api|_next/static|_next/image|favicon.ico|signin|signup|forgot-password|reset-password).*)"],
-};
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    "/api/auth/:path*",
+  ],
+}

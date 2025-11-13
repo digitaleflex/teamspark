@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { twoFactor } from "better-auth/plugins";
 
 // Configuration de base pour l'authentification compatible Edge
 export const auth = betterAuth({
@@ -16,4 +17,12 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days
   },
+  emailVerification: {
+    autoSignInAfterVerification: false, // L'utilisateur doit se connecter après vérification
+  },
+  plugins: [
+    twoFactor({
+      // Configuration par défaut
+    }),
+  ],
 });

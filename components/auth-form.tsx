@@ -24,6 +24,9 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string; general?: string }>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false)
+  const [loginAttempts, setLoginAttempts] = useState(0)
+  const [isBlocked, setIsBlocked] = useState(false)
   const router = useRouter()
 
   const validateForm = () => {
@@ -47,31 +50,57 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
     e.preventDefault()
     setErrors({}) // Clear previous errors
 
+    // Vérifier si l'utilisateur est bloqué
+    if (isBlocked) {
+      setErrors({ general: "Trop de tentatives de connexion. Veuillez réessayer plus tard." })
+      return
+    }
+
     if (!validateForm()) return
 
     setIsLoading(true)
     try {
       if (mode === "signin") {
-        const response = await authClient.signIn.email({
+        const response: any = await authClient.signIn.email({
           email,
           password,
         })
         if (response.error) {
-          throw new Error(response.error.message)
+          // Gérer les erreurs de connexion
+          if (response.error.message && response.error.message.includes("Invalid credentials")) {
+            const newAttempts = loginAttempts + 1
+            setLoginAttempts(newAttempts)
+            
+            // Bloquer après 5 tentatives
+            if (newAttempts >= 5) {
+              setIsBlocked(true)
+              throw new Error("Trop de tentatives de connexion. Veuillez réessayer plus tard.")
+            }
+            
+            throw new Error(`Email ou mot de passe incorrect. (${5 - newAttempts} tentatives restantes)`)
+          } else {
+            throw new Error(response.error.message || "Erreur de connexion")
+          }
         }
+        
+        // Vérifier si la 2FA est requise
+        // Pour l'instant, nous allons simplement rediriger vers le tableau de bord
+        // Dans une implémentation réelle, vous vérifieriez si la 2FA est activée pour l'utilisateur
         router.push("/dashboard")
       } else { // signup
         // Extract name from email if not provided
         const name = email.split("@")[0];
-        const response = await authClient.signUp.email({
+        const response: any = await authClient.signUp.email({
           email,
           password,
           name,
         })
         if (response.error) {
-          throw new Error(response.error.message)
+          throw new Error(response.error.message || "Erreur d'inscription")
         }
-        router.push("/dashboard")
+        
+        // Afficher un message demandant à l'utilisateur de vérifier son email
+        setShowVerificationMessage(true)
       }
     } catch (error: any) {
       console.error("Authentication error:", error)
@@ -94,6 +123,35 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
     }
 
     onSubmit?.(email, password)
+  }
+
+  if (showVerificationMessage) {
+    return (
+      <Suspense fallback={<AuthLoading />}>
+        <Card className="w-full max-w-md border-border/50">
+          <CardHeader className="space-y-2 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-primary-foreground" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl gradient-text">Vérifiez votre email</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-muted-foreground mb-6">
+              Un email de vérification a été envoyé à <strong>{email}</strong>. 
+              Veuillez cliquer sur le lien dans l'email pour vérifier votre compte.
+            </p>
+            <Button 
+              onClick={() => router.push("/signin")}
+              className="w-full"
+            >
+              Continuer vers la connexion
+            </Button>
+          </CardContent>
+        </Card>
+      </Suspense>
+    )
   }
 
   return (
@@ -133,7 +191,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
                 placeholder="vous@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
+                disabled={isLoading || isBlocked}
                 className={errors.email ? "border-destructive" : ""}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
@@ -155,7 +213,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
+                disabled={isLoading || isBlocked}
                 className={errors.password ? "border-destructive" : ""}
               />
               {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
@@ -171,7 +229,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isLoading}
+                  disabled={isLoading || isBlocked}
                   className={errors.confirmPassword ? "border-destructive" : ""}
                 />
                 {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
@@ -179,12 +237,14 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
             )}
 
             {/* Submit Button */}
-            <Button type="submit" className="w-full mt-6 h-11 font-semibold" disabled={isLoading}>
+            <Button type="submit" className="w-full mt-6 h-11 font-semibold" disabled={isLoading || isBlocked}>
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Chargement...
                 </>
+              ) : isBlocked ? (
+                "Bloqué temporairement"
               ) : (
                 mode === "signin" ? "Se connecter" : "Créer un compte"
               )}

@@ -1,57 +1,102 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Loader2 } from "lucide-react"
 
 interface TeamMember {
   id: string
-  name: string
-  email: string
+  userId: string
   role: string
+  user: {
+    id: string
+    name: string | null
+    email: string
+  }
+}
+
+interface Team {
+  id: string
+  name: string
+  description: string | null
+  ownerId: string
+  members: TeamMember[]
 }
 
 interface TeamDetailsProps {
   teamId: string
 }
 
-const mockTeam = {
-  id: "1",
-  name: "Équipe Développement",
-  description: "Équipe responsable du développement frontend et backend de l'application",
-  members: [
-    {
-      id: "1",
-      name: "Jean Dupont",
-      email: "jean.dupont@example.com",
-      role: "Lead Developer"
-    },
-    {
-      id: "2",
-      name: "Marie Martin",
-      email: "marie.martin@example.com",
-      role: "Frontend Developer"
-    },
-    {
-      id: "3",
-      name: "Pierre Bernard",
-      email: "pierre.bernard@example.com",
-      role: "Backend Developer"
-    }
-  ] as TeamMember[]
-}
-
 export function TeamDetails({ teamId }: TeamDetailsProps) {
-  // Dans une vraie application, vous feriez un appel API ici
-  // const team = await getTeamById(teamId)
-  
+  const [team, setTeam] = useState<Team | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchTeam = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/teams/${teamId}`)
+        
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération de l'équipe")
+        }
+        
+        const data: Team = await response.json()
+        setTeam(data)
+      } catch (err) {
+        console.error("Erreur lors de la récupération de l'équipe:", err)
+        setError("Impossible de charger les détails de l'équipe")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (teamId) {
+      fetchTeam()
+    }
+  }, [teamId])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-destructive">{error}</p>
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={() => window.location.reload()}
+        >
+          Réessayer
+        </Button>
+      </div>
+    )
+  }
+
+  if (!team) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Équipe non trouvée</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">{mockTeam.name}</h2>
+        <h2 className="text-2xl font-bold">{team.name}</h2>
         <p className="text-muted-foreground">
-          {mockTeam.description}
+          {team.description || "Aucune description"}
         </p>
       </div>
       
@@ -63,16 +108,16 @@ export function TeamDetails({ teamId }: TeamDetailsProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {mockTeam.members.map((member) => (
+          {team.members.map((member) => (
             <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
               <div className="flex items-center gap-4">
                 <Avatar>
-                  <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>{member.user.name ? member.user.name.charAt(0) : member.user.email.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-semibold">{member.name}</h3>
+                  <h3 className="font-semibold">{member.user.name || member.user.email}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {member.email}
+                    {member.user.email}
                   </p>
                 </div>
               </div>

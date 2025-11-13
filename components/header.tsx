@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react" // Import useEffect
-import { Menu, LogOut, Settings, HelpCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Menu, LogOut, Settings, HelpCircle, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -17,19 +17,32 @@ import { Sidebar } from "./sidebar"
 import { authClient } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 
+// Define the user type based on what we know from the database schema and error message
+interface User {
+  id: string
+  name: string
+  email: string
+  image?: string | null
+  createdAt: Date
+  updatedAt: Date
+  emailVerified: boolean
+  twoFactorEnabled: boolean | null | undefined
+}
+
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
-  const [user, setUser] = useState<{ name?: string; email?: string } | null>(null) // State for user info
+  const [user, setUser] = useState<User | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const fetchUserSession = async () => {
       try {
-        const session = await authClient.getSession()
-        if (session && session.user) {
-          setUser(session.user)
+        const sessionResponse = await authClient.getSession()
+        // Based on the error message, the user is nested within data property
+        if ('data' in sessionResponse && sessionResponse.data && 'user' in sessionResponse.data && sessionResponse.data.user) {
+          setUser(sessionResponse.data.user)
         } else {
-          setUser(null) // No user session
+          setUser(null)
         }
       } catch (error) {
         console.error("Error fetching user session:", error)
@@ -37,7 +50,7 @@ export function Header() {
       }
     }
     fetchUserSession()
-  }, []) // Run once on component mount
+  }, [])
 
   const handleSignOut = async () => {
     try {
@@ -45,7 +58,6 @@ export function Header() {
       router.push("/signin")
     } catch (error) {
       console.error("Error signing out:", error)
-      // Optionally, display an error message to the user
     }
   }
 
@@ -91,6 +103,12 @@ export function Header() {
               </div>
             )}
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/profile" className="flex gap-2 cursor-pointer">
+                <User className="w-4 h-4" />
+                Profil
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings" className="flex gap-2 cursor-pointer">
                 <Settings className="w-4 h-4" />
