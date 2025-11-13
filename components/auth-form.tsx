@@ -84,9 +84,15 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
         }
         
         // Vérifier si la 2FA est requise
-        // Pour l'instant, nous allons simplement rediriger vers le tableau de bord
-        // Dans une implémentation réelle, vous vérifieriez si la 2FA est activée pour l'utilisateur
-        router.push("/dashboard")
+        // Vérifier si l'utilisateur a la 2FA activée
+        const session = await authClient.getSession()
+        if (session.data?.user?.twoFactorEnabled) {
+          // Rediriger vers la page 2FA
+          router.push("/signin-2fa")
+        } else {
+          // Rediriger vers le tableau de bord
+          router.push("/dashboard")
+        }
       } else { // signup
         // Extract name from email if not provided
         const name = email.split("@")[0];
@@ -199,14 +205,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="password">Mot de passe</Label>
-                {mode === "signin" && (
-                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                    Mot de passe oublié ?
-                  </Link>
-                )}
-              </div>
+              <Label htmlFor="password">Mot de passe</Label>
               <Input
                 id="password"
                 type="password"
@@ -229,7 +228,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isLoading || isBlocked}
+                  disabled={isLoading}
                   className={errors.confirmPassword ? "border-destructive" : ""}
                 />
                 {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
@@ -237,35 +236,39 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
             )}
 
             {/* Submit Button */}
-            <Button type="submit" className="w-full mt-6 h-11 font-semibold" disabled={isLoading || isBlocked}>
+            <Button 
+              type="submit" 
+              className="w-full mt-6 h-11 font-semibold" 
+              disabled={isLoading || isBlocked}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Chargement...
+                  {mode === "signin" ? "Connexion..." : "Création du compte..."}
                 </>
-              ) : isBlocked ? (
-                "Bloqué temporairement"
+              ) : mode === "signin" ? (
+                "Se connecter"
               ) : (
-                mode === "signin" ? "Se connecter" : "Créer un compte"
+                "Créer un compte"
               )}
             </Button>
 
-            {/* Toggle Link */}
+            {/* Links */}
             <div className="text-center text-sm">
               {mode === "signin" ? (
                 <>
-                  Vous n&apos;avez pas de compte ?{" "}
+                  <Link href="/forgot-password" className="font-semibold text-primary hover:text-secondary transition-colors">
+                    Mot de passe oublié ?
+                  </Link>
+                  <span className="mx-2">•</span>
                   <Link href="/signup" className="font-semibold text-primary hover:text-secondary transition-colors">
-                    S&apos;inscrire
+                    Créer un compte
                   </Link>
                 </>
               ) : (
-                <>
-                  Vous avez déjà un compte ?{" "}
-                  <Link href="/signin" className="font-semibold text-primary hover:text-secondary transition-colors">
-                    Se connecter
-                  </Link>
-                </>
+                <Link href="/signin" className="font-semibold text-primary hover:text-secondary transition-colors">
+                  Déjà un compte ? Se connecter
+                </Link>
               )}
             </div>
           </form>

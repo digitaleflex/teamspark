@@ -1,63 +1,149 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Users, Users2, TrendingUp, Activity } from "lucide-react"
+
+interface ActivityItem {
+  id: string
+  action: string
+  target: string
+  timestamp: string
+}
 
 export default function AnalyticsPage() {
+  const [loading, setLoading] = useState(true)
+  const [analyticsData, setAnalyticsData] = useState({
+    totalTeams: 0,
+    totalMembers: 0,
+    recentActivity: [] as ActivityItem[]
+  })
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/analytics")
+        
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération des données d'analyse")
+        }
+        
+        const data = await response.json()
+        setAnalyticsData(data)
+      } catch (err) {
+        console.error("Erreur lors de la récupération des données d'analyse:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAnalytics()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Analyse</h1>
+          <p className="text-muted-foreground">
+            Aperçu de vos statistiques et activités
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="bg-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-24 bg-accent rounded animate-pulse" />
+                <div className="h-8 w-8 bg-accent rounded-full animate-pulse" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-6 w-16 bg-accent rounded animate-pulse" />
+                <div className="h-4 w-20 bg-accent rounded animate-pulse mt-1" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Card className="bg-card">
+          <CardHeader>
+            <CardTitle>Activité récente</CardTitle>
+            <CardDescription>
+              Historique des actions récentes dans votre application
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center">
+                  <div className="h-10 w-10 bg-accent rounded-full animate-pulse" />
+                  <div className="ml-4 space-y-1 flex-1">
+                    <div className="h-4 w-32 bg-accent rounded animate-pulse" />
+                    <div className="h-3 w-24 bg-accent rounded animate-pulse" />
+                  </div>
+                  <div className="h-3 w-20 bg-accent rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Analytics</h1>
+        <h1 className="text-3xl font-bold">Analyse</h1>
         <p className="text-muted-foreground">
-          Analysez les performances et les statistiques de votre application
+          Aperçu de vos statistiques et activités
         </p>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Utilisateurs actifs</CardTitle>
-            <CardDescription>
-              Nombre d'utilisateurs actifs cette semaine
-            </CardDescription>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-card hover:bg-accent transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Équipes</CardTitle>
+            <Users className="w-5 h-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">1,250</div>
+            <div className="text-2xl font-bold">{analyticsData.totalTeams}</div>
             <p className="text-xs text-muted-foreground">
-              +15% par rapport à la semaine dernière
+              Équipes actives
             </p>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Taux de conversion</CardTitle>
-            <CardDescription>
-              Pourcentage de visiteurs convertis
-            </CardDescription>
+
+        <Card className="bg-card hover:bg-accent transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Membres</CardTitle>
+            <Users2 className="w-5 h-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">8.2%</div>
+            <div className="text-2xl font-bold">{analyticsData.totalMembers}</div>
             <p className="text-xs text-muted-foreground">
-              +2.1% par rapport au mois dernier
+              Membres au total
             </p>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenus mensuels</CardTitle>
-            <CardDescription>
-              Revenus générés ce mois-ci
-            </CardDescription>
+
+        <Card className="bg-card hover:bg-accent transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Activité</CardTitle>
+            <TrendingUp className="w-5 h-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">€12,450</div>
+            <div className="text-2xl font-bold">{analyticsData.recentActivity.length}</div>
             <p className="text-xs text-muted-foreground">
-              +12% par rapport au mois dernier
+              Actions récentes
             </p>
           </CardContent>
         </Card>
       </div>
-      
-      <Card>
+
+      <Card className="bg-card">
         <CardHeader>
           <CardTitle>Activité récente</CardTitle>
           <CardDescription>
@@ -66,28 +152,22 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center">
-              <div className="ml-4 space-y-1">
-                <p className="text-sm font-medium">Nouvel utilisateur inscrit</p>
-                <p className="text-sm text-muted-foreground">
-                  jean.dupont@example.com
-                </p>
+            {analyticsData.recentActivity.map((activity) => (
+              <div key={activity.id} className="flex items-center">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <Activity className="w-4 h-4 text-primary" />
+                </div>
+                <div className="ml-4 space-y-1">
+                  <p className="text-sm font-medium">{activity.action}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {activity.target}
+                  </p>
+                </div>
+                <div className="ml-auto text-sm text-muted-foreground">
+                  {activity.timestamp}
+                </div>
               </div>
-              <div className="ml-auto text-sm text-muted-foreground">
-                Il y a 5 minutes
-              </div>
-            </div>
-            <div className="flex items-center">
-              <div className="ml-4 space-y-1">
-                <p className="text-sm font-medium">Équipe créée</p>
-                <p className="text-sm text-muted-foreground">
-                  Équipe Marketing
-                </p>
-              </div>
-              <div className="ml-auto text-sm text-muted-foreground">
-                Il y a 2 heures
-              </div>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>

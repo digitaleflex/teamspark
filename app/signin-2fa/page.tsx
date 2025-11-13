@@ -16,10 +16,34 @@ export default function SignIn2FAPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Rediriger si l'utilisateur n'a pas de session 2FA en attente
+  // Vérifier si l'utilisateur a une session 2FA en attente
   useEffect(() => {
-    // Dans une vraie application, vous vérifieriez ici si l'utilisateur a une session 2FA en attente
-    // Pour l'instant, nous allons simplement permettre l'accès à cette page
+    const check2FASession = async () => {
+      try {
+        // Vérifier si l'utilisateur est connecté
+        const session = await authClient.getSession()
+        if (!session || !session.data) {
+          // Pas de session, rediriger vers la page de connexion
+          router.push("/signin")
+          return
+        }
+        
+        // Vérifier si la 2FA est activée pour cet utilisateur
+        if (!session.data.user?.twoFactorEnabled) {
+          // 2FA non activée, rediriger vers le tableau de bord
+          router.push("/dashboard")
+          return
+        }
+        
+        // L'utilisateur a une session valide et la 2FA activée
+        // On peut rester sur cette page
+      } catch (err) {
+        console.error("Error checking 2FA session:", err)
+        router.push("/signin")
+      }
+    }
+    
+    check2FASession()
   }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,11 +71,12 @@ export default function SignIn2FAPage() {
         }
       }
       
-      if (response.data?.verified) {
-        router.push("/dashboard")
-      } else {
-        throw new Error("Code 2FA invalide")
+      if (response.error) {
+        throw new Error(response.error.message)
       }
+      
+      // Connexion 2FA réussie, rediriger vers le tableau de bord
+      router.push("/dashboard")
     } catch (err: any) {
       console.error("2FA verification error:", err)
       setError(err.message || "Code 2FA invalide")
