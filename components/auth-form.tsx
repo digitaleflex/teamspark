@@ -2,15 +2,16 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation" // Import useRouter
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trophy } from "lucide-react"
-import { authClient } from "@/lib/auth-client" // Import authClient
+import { Trophy, Loader2 } from "lucide-react"
+import { authClient } from "@/lib/auth-client"
+import { AuthLoading } from "@/components/auth-loading"
 
 interface AuthFormProps {
   mode: "signin" | "signup"
@@ -23,7 +24,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string; general?: string }>({})
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter() // Initialize useRouter
+  const router = useRouter()
 
   const validateForm = () => {
     const newErrors: typeof errors = {}
@@ -51,11 +52,26 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
     setIsLoading(true)
     try {
       if (mode === "signin") {
-        await authClient.email.signIn({ email, password })
-        router.push("/dashboard") // Redirect to dashboard on successful sign-in
+        const response = await authClient.signIn.email({
+          email,
+          password,
+        })
+        if (response.error) {
+          throw new Error(response.error.message)
+        }
+        router.push("/dashboard")
       } else { // signup
-        await authClient.email.signUp({ email, password })
-        router.push("/dashboard") // Redirect to dashboard on successful sign-up
+        // Extract name from email if not provided
+        const name = email.split("@")[0];
+        const response = await authClient.signUp.email({
+          email,
+          password,
+          name,
+        })
+        if (response.error) {
+          throw new Error(response.error.message)
+        }
+        router.push("/dashboard")
       }
     } catch (error: any) {
       console.error("Authentication error:", error)
@@ -69,7 +85,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
         } else if (error.message.includes("User not found")) {
           errorMessage = "Utilisateur non trouvé."
         } else {
-          errorMessage = error.message; // Use the raw message if not specifically handled
+          errorMessage = error.message;
         }
       }
       setErrors({ general: errorMessage })
@@ -81,111 +97,120 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
   }
 
   return (
-    <Card className="w-full max-w-md border-border/50">
-      <CardHeader className="space-y-2 text-center">
-        {/* Logo and Branding */}
-        <div className="flex justify-center mb-4">
-          <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center">
-            <Trophy className="w-6 h-6 text-primary-foreground" />
-          </div>
-        </div>
-
-        <CardTitle className="text-2xl">
-          {mode === "signin" ? (
-            <span className="gradient-text">Se connecter</span>
-          ) : (
-            <span className="gradient-text">Créer un compte</span>
-          )}
-        </CardTitle>
-        <CardDescription>
-          {mode === "signin"
-            ? "Accédez à votre tableau de bord TeamSpark"
-            : "Rejoignez TeamSpark et boostez votre équipe"}
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {errors.general && <p className="text-sm text-destructive text-center">{errors.general}</p>}
-          {/* Email Field */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="vous@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-              className={errors.email ? "border-destructive" : ""}
-            />
-            {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-          </div>
-
-          {/* Password Field */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="password">Mot de passe</Label>
-              {mode === "signin" && (
-                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                  Mot de passe oublié ?
-                </Link>
-              )}
+    <Suspense fallback={<AuthLoading />}>
+      <Card className="w-full max-w-md border-border/50">
+        <CardHeader className="space-y-2 text-center">
+          {/* Logo and Branding */}
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center">
+              <Trophy className="w-6 h-6 text-primary-foreground" />
             </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              className={errors.password ? "border-destructive" : ""}
-            />
-            {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
 
-          {/* Confirm Password Field (Signup only) */}
-          {mode === "signup" && (
+          <CardTitle className="text-2xl">
+            {mode === "signin" ? (
+              <span className="gradient-text">Se connecter</span>
+            ) : (
+              <span className="gradient-text">Créer un compte</span>
+            )}
+          </CardTitle>
+          <CardDescription>
+            {mode === "signin"
+              ? "Accédez à votre tableau de bord TeamSpark"
+              : "Rejoignez TeamSpark et boostez votre équipe"}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {errors.general && <p className="text-sm text-destructive text-center">{errors.general}</p>}
+            {/* Email Field */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="confirmPassword"
+                id="email"
+                type="email"
+                placeholder="vous@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                className={errors.email ? "border-destructive" : ""}
+              />
+              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="password">Mot de passe</Label>
+                {mode === "signin" && (
+                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                    Mot de passe oublié ?
+                  </Link>
+                )}
+              </div>
+              <Input
+                id="password"
                 type="password"
                 placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
-                className={errors.confirmPassword ? "border-destructive" : ""}
+                className={errors.password ? "border-destructive" : ""}
               />
-              {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
+              {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
             </div>
-          )}
 
-          {/* Submit Button */}
-          <Button type="submit" className="w-full mt-6 h-11 font-semibold" disabled={isLoading}>
-            {isLoading ? "Chargement..." : mode === "signin" ? "Se connecter" : "Créer un compte"}
-          </Button>
-
-          {/* Toggle Link */}
-          <div className="text-center text-sm">
-            {mode === "signin" ? (
-              <>
-                Vous n&apos;avez pas de compte ?{" "}
-                <Link href="/signup" className="font-semibold text-primary hover:text-secondary transition-colors">
-                  S&apos;inscrire
-                </Link>
-              </>
-            ) : (
-              <>
-                Vous avez déjà un compte ?{" "}
-                <Link href="/signin" className="font-semibold text-primary hover:text-secondary transition-colors">
-                  Se connecter
-                </Link>
-              </>
+            {/* Confirm Password Field (Signup only) */}
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isLoading}
+                  className={errors.confirmPassword ? "border-destructive" : ""}
+                />
+                {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
+              </div>
             )}
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+
+            {/* Submit Button */}
+            <Button type="submit" className="w-full mt-6 h-11 font-semibold" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Chargement...
+                </>
+              ) : (
+                mode === "signin" ? "Se connecter" : "Créer un compte"
+              )}
+            </Button>
+
+            {/* Toggle Link */}
+            <div className="text-center text-sm">
+              {mode === "signin" ? (
+                <>
+                  Vous n&apos;avez pas de compte ?{" "}
+                  <Link href="/signup" className="font-semibold text-primary hover:text-secondary transition-colors">
+                    S&apos;inscrire
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Vous avez déjà un compte ?{" "}
+                  <Link href="/signin" className="font-semibold text-primary hover:text-secondary transition-colors">
+                    Se connecter
+                  </Link>
+                </>
+              )}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </Suspense>
   )
 }

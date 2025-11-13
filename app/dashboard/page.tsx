@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Zap, Users, TrendingUp, Lightbulb } from "lucide-react"
+import { DashboardLoading } from "@/components/dashboard-loading"
 
 export default function DashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [sessionError, setSessionError] = useState(false)
 
   useEffect(() => {
     const checkSession = async () => {
@@ -23,16 +25,27 @@ export default function DashboardPage() {
         }
       } catch (error) {
         console.error("Error checking session:", error)
+        setSessionError(true)
         router.push("/signin")
       }
     }
     checkSession()
   }, [router])
 
+  if (sessionError) {
+    return (
+      <div className="md:ml-64 min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-muted-foreground">Erreur de session. Redirection...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Chargement du tableau de bord...</p>
+      <div className="md:ml-64 min-h-screen p-4 md:p-6 bg-background">
+        <DashboardLoading />
       </div>
     )
   }
@@ -71,7 +84,7 @@ export default function DashboardPage() {
         <h1 className="text-3xl md:text-4xl font-bold leading-tight">
           Bien bienvenue, <span className="gradient-text">Jean Dupont</span> !
         </h1>
-        <p className="text-lg text-muted-foreground">Prêt à transformer votre équipe avec la puissance de l\'IA</p>
+        <p className="text-lg text-muted-foreground">Prêt à transformer votre équipe avec la puissance de l&apos;IA</p>
       </section>
 
       {/* User Info Cards */}

@@ -1,6 +1,8 @@
+import { Suspense } from "react"
 import { AuthForm } from "@/components/auth-form"
 import { Trophy } from "lucide-react"
 import Link from "next/link"
+import { AuthLoading } from "@/components/auth-loading"
 
 export default function SignInPage() {
   return (
@@ -27,7 +29,9 @@ export default function SignInPage() {
       </div>
 
       <div className="relative z-10 flex justify-center items-center w-full">
-        <AuthForm mode="signin" />
+        <Suspense fallback={<AuthLoading />}>
+          <AuthForm mode="signin" />
+        </Suspense>
       </div>
     </main>
   )
